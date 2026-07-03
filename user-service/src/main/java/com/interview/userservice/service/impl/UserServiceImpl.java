@@ -1,21 +1,29 @@
 package com.interview.userservice.service.impl;
 
 import com.interview.userservice.constants.MessageConstants;
+import com.interview.userservice.dto.request.ChangePasswordRequest;
 import com.interview.userservice.dto.request.LoginRequest;
 import com.interview.userservice.dto.request.RegisterRequest;
+import com.interview.userservice.dto.request.UpdateProfileRequest;
 import com.interview.userservice.dto.response.ApiResponse;
 import com.interview.userservice.dto.response.LoginResponse;
+import com.interview.userservice.dto.response.UserResponse;
 import com.interview.userservice.entity.User;
 import com.interview.userservice.enums.Role;
 import com.interview.userservice.exception.InvalidCredentialsException;
 import com.interview.userservice.exception.UserAlreadyExistsException;
+import com.interview.userservice.exception.UserNotFoundException;
 import com.interview.userservice.mapper.UserMapper;
 import com.interview.userservice.repository.UserRepository;
 import com.interview.userservice.service.UserService;
+import org.apache.coyote.BadRequestException;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.context.SecurityContextHolderFilter;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -34,7 +42,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public ApiResponse<Void> register(RegisterRequest request) {
+    public ApiResponse<UserResponse> register(RegisterRequest request) {
 
         // Step 1: Check duplicate email
         if (userRepository.existsByEmail(request.getEmail())){
@@ -50,13 +58,16 @@ public class UserServiceImpl implements UserService {
         user.setRole(Role.ROLE_CANDIDATE);
 
         // Step 5: Save User
-        userRepository.save(user);
+        User savedUser = userRepository.save(user);
+
+        //Conversion Entity to ResponseDTO
+        UserResponse userResponse =  userMapper.toUserResponse(savedUser);
 
         // Step 6: Return Response
-        return ApiResponse.<Void>builder()
+        return ApiResponse.<UserResponse>builder()
                 .success(true)
                 .message(MessageConstants.USER_REGISTERED_SUCCESS)
-                .data(null)
+                .data(userResponse)
                 .timestamp(LocalDateTime.now())
                 .build();
 
@@ -91,4 +102,123 @@ public class UserServiceImpl implements UserService {
                 .timestamp(LocalDateTime.now())
                 .build();
     }
+
+    @Override
+    public ApiResponse<UserResponse> getProfile() {
+
+        //Find email of logged-in user(Won't work w.o. Authentication)
+        String email =
+                SecurityContextHolder.getContext().getAuthentication().getName();
+        //User dhundho
+        User user = userRepository.findByEmail(email).orElseThrow(()->
+                new UserNotFoundException(MessageConstants.USER_NOT_FOUND));
+        //Entity ko Response DTO m convert
+        UserResponse userResponse =  userMapper.toUserResponse(user);
+
+        return ApiResponse.<UserResponse>builder()
+                .success(true)
+                .message(MessageConstants.USER_FETCHED_SUCCESS)
+                .data(userResponse)
+                .timestamp(LocalDateTime.now())
+                .build();
+    }
+
+    @Override
+    public ApiResponse<UserResponse> updateProfile(UpdateProfileRequest request) {
+
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() ->new UserNotFoundException(MessageConstants.USER_NOT_FOUND));
+
+        userMapper.updateUserFromRequest(request, user);
+
+        User updatedUser = userRepository.save(user);
+        UserResponse userResponse =  userMapper.toUserResponse(updatedUser);
+
+        return ApiResponse.<UserResponse>builder()
+                .success(true)
+                .message(MessageConstants.USER_UPDATED_SUCCESS)
+                .data(userResponse)
+                .timestamp(LocalDateTime.now())
+                .build();
+    }
+
+    @Override
+    public ApiResponse<Void> changePassword(ChangePasswordRequest request) {
+        User user = userRepository.findById(request.getUserId())
+                .orElseThrow(()->new UserNotFoundException(MessageConstants.USER_NOT_FOUND));
+
+        if(!passwordEncoder.matches(request.getOldPassword(),user.getPassword())){
+            throw new InvalidCredentialsException(MessageConstants.INVALID_OLD_PASSWORD);
+        }
+        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        userRepository.save(user);
+        return ApiResponse.<Void>builder()
+                .success(true)
+                .message(MessageConstants.PASSWORD_CHANGED_SUCCESS)
+                .data(null)
+                .timestamp(LocalDateTime.now())
+                .build();
+    }
+
+    @Override
+    public ApiResponse<UserResponse> getUserById(Long id) {
+        User user = userRepository.findById(id)
+                .orElseThrow(()->new UserNotFoundException(MessageConstants.USER_NOT_FOUND));
+        UserResponse userResponse =  userMapper.toUserResponse(user);
+        return ApiResponse.<UserResponse>builder()
+                .success(true)
+                .message(MessageConstants.USER_FETCHED_SUCCESS)
+                .data(userResponse)
+                .timestamp(LocalDateTime.now())
+                .build();
+    }
+
+    @Override
+    public ApiResponse<List<UserResponse>> getAllUsers() {
+        List<UserResponse> users = userRepository.findAll()
+                .stream().map(userMapper::toUserResponse)
+                .toList();
+
+        return ApiResponse.<List<UserResponse>>builder()
+                .success(true)
+                .message(MessageConstants.USERS_FETCHED_SUCCESS)
+                .data(users)
+                .timestamp(LocalDateTime.now())
+                .build();
+    }
+
+    @Override
+    public ApiResponse<UserResponse> changeUserRole(Long id, Role role) {
+        User user = userRepository.findById(id)
+                .orElseThrow(()->
+                        new UserNotFoundException(MessageConstants.USER_NOT_FOUND));
+
+        user.setRole(role);
+        User updateduser = userRepository.save(user);
+        UserResponse userResponse =  userMapper.toUserResponse(updateduser);
+
+        return ApiResponse.<UserResponse>builder()
+                .success(true)
+                .message(MessageConstants.ROLE_UPDATED_SUCCESS)
+                .data(userResponse)
+                .timestamp(LocalDateTime.now())
+                .build();
+    }
+
+    @Override
+    public ApiResponse<Void> deleteUser(Long id) {
+        User user = userRepository.findById(id)
+                .orElseThrow(()->new UserNotFoundException(MessageConstants.USER_NOT_FOUND));
+
+        userRepository.delete(user);
+
+        return ApiResponse.<Void>builder()
+                .success(true)
+                .message(MessageConstants.USER_DELETED_SUCCESS)
+                .data(null)
+                .timestamp(LocalDateTime.now())
+                .build();
+    }
+
 }

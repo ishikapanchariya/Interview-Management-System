@@ -38,7 +38,7 @@ public class GlobalExceptionHandler {
         return buildErrorResponse(ex.getMessage(),HttpStatus.NOT_FOUND);// 404 Not Found
     }
 
-    @ExceptionHandler(UserNotFoundException.class)
+    @ExceptionHandler(InvalidCredentialsException.class)
     public ResponseEntity<ApiResponse<Void>>
     handleInvalidCredentialsException(InvalidCredentialsException ex) {
         return buildErrorResponse(ex.getMessage(),HttpStatus.UNAUTHORIZED);// 401 Unauthorized
@@ -46,7 +46,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler (MethodArgumentNotValidException.class)
     public ResponseEntity<ApiResponse<Map<String,String>>>
-    handleValidationException(MethodArgumentNotValidException ex) {
+    handleArgumentNotValidException(MethodArgumentNotValidException ex) {
         Map<String, String> errors = new HashMap<>();
 
         ex.getBindingResult().getFieldErrors().forEach(error ->
@@ -66,5 +66,4 @@ public class GlobalExceptionHandler {
                 "Something went wrong. Please try again later.",
                 HttpStatus.INTERNAL_SERVER_ERROR);// 500 Internal Server Error
     }
-
 }
