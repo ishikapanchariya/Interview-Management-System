@@ -15,7 +15,11 @@ import com.interview.userservice.exception.UserAlreadyExistsException;
 import com.interview.userservice.exception.UserNotFoundException;
 import com.interview.userservice.mapper.UserMapper;
 import com.interview.userservice.repository.UserRepository;
+import com.interview.userservice.security.JwtService;
+import com.interview.userservice.security.UserPrincipal;
 import com.interview.userservice.service.UserService;
+import io.jsonwebtoken.Jwts;
+import lombok.RequiredArgsConstructor;
 import org.apache.coyote.BadRequestException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -27,19 +31,13 @@ import java.util.List;
 import java.util.Optional;
 
 @Service
+@RequiredArgsConstructor
 public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
     private final UserMapper userMapper;
     private final PasswordEncoder passwordEncoder;
-
-    public UserServiceImpl(UserRepository userRepository,
-                           UserMapper userMapper,
-                           PasswordEncoder passwordEncoder) {
-        this.userRepository = userRepository;
-        this.userMapper = userMapper;
-        this.passwordEncoder = passwordEncoder;
-    }
+    private final JwtService jwtService;
 
     @Override
     public ApiResponse<UserResponse> register(RegisterRequest request) {
@@ -85,8 +83,9 @@ public class UserServiceImpl implements UserService {
             throw new InvalidCredentialsException(MessageConstants.INVALID_CREDENTIALS);
         }
 
-        // Step 3 - Temporary Token
-       String token = null;
+        // Step 3 - Login API Token
+        UserPrincipal userPrincipal = new UserPrincipal(user);
+       String token = jwtService.generateToken(userPrincipal);
 
         // Step 4 - Prepare Response
        LoginResponse loginResponse = userMapper.toLoginResponse(user);
@@ -102,6 +101,7 @@ public class UserServiceImpl implements UserService {
                 .timestamp(LocalDateTime.now())
                 .build();
     }
+    //eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJpc2hhQGdtYWlsLmNvbSIsImlhdCI6MTc4MzMzNTM5OSwiZXhwIjoxNzgzNDIxNzk5fQ.bjnlwJCWQ4-Dljf_k6YRpOi8ZDn9-a_-r8YyeHLW0ts
 
     @Override
     public ApiResponse<UserResponse> getProfile() {
@@ -145,7 +145,12 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public ApiResponse<Void> changePassword(ChangePasswordRequest request) {
-        User user = userRepository.findById(request.getUserId())
+
+        // Get logged-in user's email from JWT
+
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+
+        User user = userRepository.findByEmail(email)
                 .orElseThrow(()->new UserNotFoundException(MessageConstants.USER_NOT_FOUND));
 
         if(!passwordEncoder.matches(request.getOldPassword(),user.getPassword())){

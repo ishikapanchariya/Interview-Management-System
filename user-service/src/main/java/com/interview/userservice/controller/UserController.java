@@ -17,10 +17,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 @RestController
-@RequiredArgsConstructor
 @RequestMapping(ApiConstants.USERS)
+@RequiredArgsConstructor
 public class UserController {
-    private UserService userService;
+    private final UserService userService;
 
     @GetMapping("/profile")
     public ResponseEntity<ApiResponse<UserResponse>> getProfile() {

@@ -9,8 +9,6 @@ import lombok.*;
 @Builder
 public class ChangePasswordRequest {
     @NotBlank
-    private Long userId;
-    @NotBlank
     private String oldPassword;
     @NotBlank
     private String newPassword;

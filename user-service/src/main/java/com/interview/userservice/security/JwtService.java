@@ -10,7 +10,6 @@ import org.springframework.stereotype.Service;
 
 import javax.crypto.SecretKey;
 
-import java.security.Key;
 import java.util.Date;
 import java.util.function.Function;
 
@@ -52,5 +51,10 @@ public class JwtService {
                 .build()
                 .parseSignedClaims(token)
                 .getPayload();
+    }
+
+    public boolean isTokenValid(String jwt, UserDetails userDetails) {
+        return extractClaim(jwt,Claims::getSubject)
+                .equals(userDetails.getUsername());
     }
 }
