@@ -1,5 +1,6 @@
 package com.interview.userservice.security;
 
+import com.interview.userservice.entity.User;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
@@ -11,6 +12,8 @@ import org.springframework.stereotype.Service;
 import javax.crypto.SecretKey;
 
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.function.Function;
 
 @Service
@@ -23,9 +26,18 @@ public class JwtService {
     private Long jwtExpiration;
 
     //time to Generate Token
-    public String generateToken(UserDetails userDetails) {
+    public String generateToken(User user){
+
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("userId", user.getId());
+        claims.put("role", user.getRole().name());
+        return createToken(claims,user.getEmail());
+    }
+
+    private String createToken(Map<String, Object> claims, String subject) {
         return Jwts.builder()
-                .subject(userDetails.getUsername())
+                .claims(claims)
+                .subject(subject)
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + jwtExpiration))
                 .signWith(getSigningKey())
@@ -37,11 +49,20 @@ public class JwtService {
         return Keys.hmacShaKeyFor(keyBytes);
     }
 
+    public  Long extractUserId(String token){
+        return extractClaim(token, claims ->
+                claims.get("userId", Long.class));
+    }
+    public String extractRole(String token){
+        return extractClaim(token, claims ->
+                claims.get("role", String.class));
+    }
+
     public String extractUsername(String token) {
         return extractClaim(token, Claims::getSubject);
     }
 
-    public  <T>T extractClaim(String token, Function<Claims, T> claimsResolver) {
+    public  <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {
         Claims claims = extractAllClaims(token);
         return claimsResolver.apply(claims);
     }
@@ -53,8 +74,15 @@ public class JwtService {
                 .getPayload();
     }
 
-    public boolean isTokenValid(String jwt, UserDetails userDetails) {
-        return extractClaim(jwt,Claims::getSubject)
-                .equals(userDetails.getUsername());
+    public boolean isTokenValid(String token, UserDetails userDetails) {
+        return extractUsername(token)
+                .equals(userDetails.getUsername())
+                && !isTokenExpired(token);
     }
+
+    private boolean isTokenExpired(String token) {
+        return extractClaim(token, claims ->
+                claims.getExpiration().before(new Date()));
+    }
+
 }

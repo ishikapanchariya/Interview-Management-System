@@ -1,6 +1,7 @@
 package com.interview.userservice.config;
 
 import com.interview.userservice.constants.ApiConstants;
+import com.interview.userservice.security.CustomAuthenticationEntryPoint;
 import com.interview.userservice.security.CustomUserDetailsService;
 import com.interview.userservice.security.JwtAuthenticationFilter;
 import lombok.RequiredArgsConstructor;
@@ -26,11 +27,12 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @RequiredArgsConstructor
 public class SecurityConfig {
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
-    private  final CustomUserDetailsService  customUserDetailsService;
+    private final CustomUserDetailsService customUserDetailsService;
+    private final CustomAuthenticationEntryPoint customAuthenticationEntryPoint;
 
     @Bean
     public PasswordEncoder passwordEncoder(){
-        return new BCryptPasswordEncoder();// Object which implements PasswordEncoder interface
+        return new BCryptPasswordEncoder(); // Object which implements PasswordEncoder interface
     }
 
     public DaoAuthenticationProvider daoAuthenticationProvider(){
@@ -59,11 +61,24 @@ public class SecurityConfig {
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
+                .exceptionHandling(exceptions -> exceptions
+                        .authenticationEntryPoint(customAuthenticationEntryPoint))
+
                 .authorizeHttpRequests(
-                        auth -> auth.requestMatchers(
+                        auth -> auth
+
+                                //Public API
+                                .requestMatchers(
                                         "/api/v1/auth/**"
                                 ).permitAll()
+
+                                //Protected API
+                                .requestMatchers("/api/v1/internal/**")
+                                .authenticated()
+
+                                // Remaining APIs
                 .anyRequest().authenticated())
+
                 .authenticationProvider(daoAuthenticationProvider())
 
                 .addFilterBefore(jwtAuthenticationFilter,

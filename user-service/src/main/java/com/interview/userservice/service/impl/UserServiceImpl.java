@@ -11,6 +11,7 @@ import com.interview.userservice.dto.response.UserResponse;
 import com.interview.userservice.entity.User;
 import com.interview.userservice.enums.Role;
 import com.interview.userservice.exception.InvalidCredentialsException;
+import com.interview.userservice.exception.ResourceNotFoundException;
 import com.interview.userservice.exception.UserAlreadyExistsException;
 import com.interview.userservice.exception.UserNotFoundException;
 import com.interview.userservice.mapper.UserMapper;
@@ -68,8 +69,8 @@ public class UserServiceImpl implements UserService {
                 .data(userResponse)
                 .timestamp(LocalDateTime.now())
                 .build();
-
     }
+
     @Override
     public ApiResponse<LoginResponse> login(LoginRequest request) {
 
@@ -77,22 +78,17 @@ public class UserServiceImpl implements UserService {
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(()->
                         new InvalidCredentialsException(MessageConstants.INVALID_CREDENTIALS));
-
         //Verify password
        if(!passwordEncoder.matches(request.getPassword(),user.getPassword())){
             throw new InvalidCredentialsException(MessageConstants.INVALID_CREDENTIALS);
         }
-
         // Step 3 - Login API Token
-        UserPrincipal userPrincipal = new UserPrincipal(user);
-       String token = jwtService.generateToken(userPrincipal);
-
+       String token = jwtService.generateToken(user);
         // Step 4 - Prepare Response
        LoginResponse loginResponse = userMapper.toLoginResponse(user);
-            //only token manually set karenge
+            //only token manually set Karenge
         loginResponse.setAccessToken(token);
         loginResponse.setTokenType("Bearer");
-
         // Step 5 - Return Response
         return ApiResponse.<LoginResponse>builder()
                 .success(true)
@@ -222,6 +218,34 @@ public class UserServiceImpl implements UserService {
                 .success(true)
                 .message(MessageConstants.USER_DELETED_SUCCESS)
                 .data(null)
+                .timestamp(LocalDateTime.now())
+                .build();
+    }
+
+    @Override
+    public ApiResponse<UserResponse> getInternalUser(Long id) {
+        User user = userRepository.findById(id).orElseThrow(()->
+                new ResourceNotFoundException(MessageConstants.USER_NOT_FOUND));
+
+        UserResponse response =  userMapper.toUserResponse(user);
+        return ApiResponse.<UserResponse>builder()
+                .success(true)
+                .message("Internal user fetched successfully")
+                .data(response)
+                .timestamp(LocalDateTime.now())
+                .build();
+    }
+
+    @Override
+    public ApiResponse<List<UserResponse>> getInternalUsers() {
+        List<UserResponse> responses = userRepository.findAll()
+                .stream()
+                .map(userMapper::toUserResponse)
+                .toList();
+        return ApiResponse.<List<UserResponse>>builder()
+                .success(true)
+                .message("User fetched successfully")
+                .data(responses)
                 .timestamp(LocalDateTime.now())
                 .build();
     }

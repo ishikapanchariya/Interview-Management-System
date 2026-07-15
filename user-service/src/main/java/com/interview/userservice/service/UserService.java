@@ -24,10 +24,13 @@ public interface UserService {
 
     ApiResponse<UserResponse> getUserById(Long id);
 
-    ApiResponse <List<UserResponse>> getAllUsers();
+    ApiResponse<List<UserResponse>> getAllUsers();
 
-    ApiResponse <UserResponse> changeUserRole(Long id, Role role);
+    ApiResponse<UserResponse> changeUserRole(Long id, Role role);
 
     ApiResponse<Void> deleteUser(Long id);
 
+    ApiResponse<UserResponse> getInternalUser(Long id);
+
+    ApiResponse<List<UserResponse>> getInternalUsers();
 }
