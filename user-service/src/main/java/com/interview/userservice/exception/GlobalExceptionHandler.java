@@ -1,6 +1,7 @@
 package com.interview.userservice.exception;
 
 import com.interview.userservice.dto.response.ApiResponse;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
@@ -12,6 +13,7 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 
+@Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
@@ -61,7 +63,9 @@ public class GlobalExceptionHandler {
         return ResponseEntity.badRequest().body(response);// 400 Bad Request
     }
 
+    @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleException(Exception ex) {
+        log.error("An unexpected error occurred: ", ex);
         return buildErrorResponse(
                 "Something went wrong. Please try again later.",
                 HttpStatus.INTERNAL_SERVER_ERROR);// 500 Internal Server Error

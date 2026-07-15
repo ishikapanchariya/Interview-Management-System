@@ -26,6 +26,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.context.SecurityContextHolderFilter;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -41,6 +42,7 @@ public class UserServiceImpl implements UserService {
     private final JwtService jwtService;
 
     @Override
+    @Transactional
     public ApiResponse<UserResponse> register(RegisterRequest request) {
 
         // Step 1: Check duplicate email
@@ -120,6 +122,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional
     public ApiResponse<UserResponse> updateProfile(UpdateProfileRequest request) {
 
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
@@ -140,6 +143,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional
     public ApiResponse<Void> changePassword(ChangePasswordRequest request) {
 
         // Get logged-in user's email from JWT
@@ -190,6 +194,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional
     public ApiResponse<UserResponse> changeUserRole(Long id, Role role) {
         User user = userRepository.findById(id)
                 .orElseThrow(()->
@@ -208,6 +213,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional
     public ApiResponse<Void> deleteUser(Long id) {
         User user = userRepository.findById(id)
                 .orElseThrow(()->new UserNotFoundException(MessageConstants.USER_NOT_FOUND));

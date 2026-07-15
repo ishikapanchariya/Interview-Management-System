@@ -57,7 +57,7 @@ public class UserController {
         return ResponseEntity.ok(userService.getAllUsers());
     }
 
-    @PreAuthorize("hasRole('ADMIN','HR')")
+    @PreAuthorize("hasAnyRole('ADMIN','HR')")
     @PutMapping("/{id}/role")
     public ResponseEntity<ApiResponse<UserResponse>> changeUserRole
             (@PathVariable Long id,@RequestParam Role role){
