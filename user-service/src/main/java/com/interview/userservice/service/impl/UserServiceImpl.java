@@ -20,7 +20,11 @@ import com.interview.userservice.security.JwtService;
 import com.interview.userservice.security.UserPrincipal;
 import com.interview.userservice.service.UserService;
 import io.jsonwebtoken.Jwts;
+import com.interview.userservice.dto.request.SendNotificationRequest;
+import com.interview.userservice.enums.NotificationType;
+import com.interview.userservice.feign.NotificationServiceClient;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.coyote.BadRequestException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -32,6 +36,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class UserServiceImpl implements UserService {
@@ -40,6 +45,7 @@ public class UserServiceImpl implements UserService {
     private final UserMapper userMapper;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
+    private final NotificationServiceClient notificationServiceClient;
 
     @Override
     @Transactional
@@ -60,6 +66,27 @@ public class UserServiceImpl implements UserService {
 
         // Step 5: Save User
         User savedUser = userRepository.save(user);
+
+        // Send Welcome Notification (Email & In-App) asynchronously/resiliently
+        try {
+            notificationServiceClient.sendNotification(SendNotificationRequest.builder()
+                    .userId(savedUser.getId())
+                    .recipient(savedUser.getEmail())
+                    .subject("Welcome to Interview Management System!")
+                    .message("Hello " + savedUser.getName() + ", your account has been created successfully.")
+                    .type(NotificationType.EMAIL)
+                    .build());
+
+            notificationServiceClient.sendNotification(SendNotificationRequest.builder()
+                    .userId(savedUser.getId())
+                    .recipient(savedUser.getEmail())
+                    .subject("Account Created")
+                    .message("Welcome aboard! Your profile is active.")
+                    .type(NotificationType.IN_APP)
+                    .build());
+        } catch (Exception e) {
+            log.warn("Failed to trigger welcome notification for user {}: {}", savedUser.getEmail(), e.getMessage());
+        }
 
         //Conversion Entity to ResponseDTO
         UserResponse userResponse =  userMapper.toUserResponse(savedUser);

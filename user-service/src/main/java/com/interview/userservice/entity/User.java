@@ -2,7 +2,6 @@ package com.interview.userservice.entity;
 
 import com.interview.userservice.enums.Role;
 import jakarta.persistence.*;
-import jakarta.validation.constraints.Pattern;
 import lombok.*;
 
 import java.time.LocalDateTime;
