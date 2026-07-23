@@ -34,9 +34,9 @@ public class GlobalExceptionHandler {
         return buildErrorResponse(ex.getMessage(),HttpStatus.CONFLICT);// 409 Conflict
     }
 
-    @ExceptionHandler(UserNotFoundException.class)
+    @ExceptionHandler({UserNotFoundException.class, ResourceNotFoundException.class})
     public ResponseEntity<ApiResponse<Void>>
-    handleUserNotFoundException(UserNotFoundException ex) {
+    handleUserNotFoundException(Exception ex) {
         return buildErrorResponse(ex.getMessage(),HttpStatus.NOT_FOUND);// 404 Not Found
     }
 
@@ -66,6 +66,11 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(org.springframework.security.access.AccessDeniedException.class)
     public ResponseEntity<ApiResponse<Void>> handleAccessDeniedException(org.springframework.security.access.AccessDeniedException ex) {
         return buildErrorResponse("Access Denied: You do not have permission to access this resource.", HttpStatus.FORBIDDEN);
+    }
+
+    @ExceptionHandler({org.springframework.web.method.annotation.MethodArgumentTypeMismatchException.class, IllegalArgumentException.class})
+    public ResponseEntity<ApiResponse<Void>> handleTypeMismatchException(Exception ex) {
+        return buildErrorResponse("Invalid request parameter or role value. Allowed roles: ROLE_ADMIN, ROLE_HR, ROLE_INTERVIEWER, ROLE_CANDIDATE.", HttpStatus.BAD_REQUEST);
     }
 
     @ExceptionHandler(Exception.class)
